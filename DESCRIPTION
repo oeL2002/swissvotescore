@@ -1,30 +1,28 @@
-Package: swissdd
+Package: swissvotescore
 Type: Package
-Title: Get Swiss Federal and Cantonal Vote Results from Opendata.swiss
-Version: 1.1.6
+Title: Transform BFS Vote-Result JSON Into Tidy Data Frames
+Version: 0.1.0
 Authors@R: c(
-    person("Thomas", "Lo Russo", email = "th.lorusso@gmail.com", role = c("cre","aut")),
-    person("Thomas", "Willi", email = "thomas.willi@uzh.ch", role = "aut"))
-Description: Builds upon the real time data service as well as the archive for national votes <https://opendata.swiss/api/3/action/package_show?id=echtzeitdaten-am-abstimmungstag-zu-eidgenoessischen-abstimmungsvorlagen> and cantonal votes <https://opendata.swiss/api/3/action/package_show?id=echtzeitdaten-am-abstimmungstag-zu-kantonalen-abstimmungsvorlagen>. It brings the results of Swiss popular votes, aggregated at the geographical level of choice, into R. Additionally, it allows to retrieve data from the Swissvotes-Database, one of the most comprehensive data platforms on Swiss referendums and initiatives <https://swissvotes.ch/page/dataset/swissvotes_dataset.csv>. 
+    person("Thomas", "Lo Russo", email = "th.lorusso@gmail.com", role = "aut"),
+    person("Thomas", "Willi", email = "thomas.willi@uzh.ch", role = "aut"),
+    person("Leo", "Jöhr", email = "leo.joehr@gmail.com", role = c("cre", "ctb")))
+Description: The json-to-data-frame transforms from the swissdd package, factored out
+    from their http fetching so that results can be reproduced from an archived copy of
+    the data rather than re-fetched. Reads the federal and cantonal vote-result json
+    published by the Swiss Federal Statistical Office and returns one tidy data frame at
+    the geographical level of choice. Derived from swissdd
+    <https://github.com/politanch/swissdd>, GPL (>= 2).
 Depends: R (>= 3.5.0)
-Imports: 
+Imports:
     dplyr,
     tidyr (>= 1.0.0),
-    ggplot2,
-    RCurl,
-    httr,
     jsonlite,
     lubridate,
     purrr,
-    sf,
-    stringr,
     tibble
-URL: https://github.com/politanch/swissdd
-BugReports: https://github.com/politanch/swissdd/issues
-Suggests:
-    viridis
+URL: https://github.com/oeL2002/swissvotescore
+BugReports: https://github.com/oeL2002/swissvotescore/issues
 License: GPL (>= 2)
 Encoding: UTF-8
-LazyData: true
-RoxygenNote: 7.3.3
 NeedsCompilation: no
+Config/roxygen2/version: 8.0.0
