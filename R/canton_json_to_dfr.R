@@ -2,13 +2,12 @@
 #'
 #' \code{canton_json_to_dfr} tranforms a single results json for a selected cantonal votedate into a tibble.
 #'
-#' @param votedate date of the ballot. Default: most recent ballot available.
+#' @param x path to a cantonal results json previously downloaded from opendata.swiss,
+#'   or the already-parsed json. The caller decides where the bytes come from; this
+#'   function performs no network access.
+#' @param votedate date of the ballot. Required. Format = YYYY-MM-DD
 #' @param geolevel geographical level for which the results should be loaded. Options: "canton", "district" or "municipality".
-#' @param dataurl list of datasets / metadata for the given dataset and its resources OR url of the dcat dataset on opendata.swiss
-#' @param index selection by index of the resource (last published = 1).
-#' @param call_res result of a previous call to the base API. Optional argument.
-#' 
-#' @importFrom httr add_headers GET http_error content
+#'
 #' @importFrom jsonlite fromJSON
 #' @importFrom tibble tibble
 #' @importFrom purrr map
@@ -21,56 +20,19 @@
 #' @export
 #' 
 #' @examples
-#' 
-#' # Get and transform the json for the most recent vote
-#' results <- canton_json_to_dfr()
-#' 
-#' # Get and transform the json for a single votedate at counting district level
-#' canton_json_to_dfr(votedate = "2020-02-09", geolevel = "zh_counting_districts")
-#'
-canton_json_to_dfr <- function(votedate = NULL, geolevel = "municipality", dataurl = NULL, index = NULL, call_res) {
-  
+#' \dontrun{
+#' # Transform an archived cantonal results json
+#' canton_json_to_dfr("kantonale_2020-02-09.json", votedate = "2020-02-09")
+#' }
+canton_json_to_dfr <- function(x, votedate, geolevel = "municipality") {
+
   # Check inputs
   check_geolevel(geolevel, available_geolevels = c("canton", "district", "municipality", "zh_counting_districts"))
+  if (missing(votedate)) stop("'votedate' is required: it cannot be inferred from a local file.")
 
-  # Get urls
-  if (is.null(dataurl)) {
-    
-    # Call API if required
-    if (missing(call_res)) call_res <- call_api_base(geolevel = "canton")
-    
-    # Handle votedate
-    available_dates <- available_votedates(geolevel = "canton", call_res)
-   
-    # Fail gracefully if available votedates cannot be retrieved
-     if(length(available_dates)<1){
-       
-      message("Available Votedates cannot be parsed. There might be a technical issue with the opendata.swiss API.")
-      
-      return(invisible(NULL))
-      
-     }
-    #
-    
-    if (is.null(votedate)) votedate <- max(available_dates)
-    votedate <- lubridate::ymd(votedate)
-    check_votedate(votedate, available_dates)
-    
-    # Get URL
-    urls <- get_vote_urls(geolevel = "canton", call_res = call_res)
-    dataurl <- urls[urls[["date"]] == votedate,][["download_url"]]
-    
-    }
-  
-  # Index
-  if (!is.null(index)) dataurl <- dataurl[index]
-  if (length(dataurl) > 1) stop("This is not a vectorised function. Only one URL can be queried at a time.")
-  
-  # Fetch, check and extract vote data
-  res <- httr::GET(dataurl, httr::add_headers(`User-Agent` = "Mozilla/5.0"))
-  res_data <- check_api_call(res)
-  # res_data <- suppressWarnings(jsonlite::fromJSON(httr::content(res, as = "text", encoding = "UTF-8")))
-  
+  # Read the vote data: a path to parse, or already-parsed json
+  res_data <- if (is.character(x)) suppressWarnings(jsonlite::fromJSON(x)) else x
+
   if(!is.null(res_data)){
   
   # Simplification
@@ -149,12 +111,6 @@ canton_json_to_dfr <- function(votedate = NULL, geolevel = "municipality", datau
   ktdata3 <- ktdata2 %>% dplyr::left_join(canton_vote_names, by = "id")
   
   # Add votedate
-  if (is.null(votedate)) {
-    
-    urls <- get_vote_urls(geolevel = "canton", call_res = call_res)
-    votedate <- urls[urls[["download_url"]] == dataurl,][["date"]]
-    
-  }
   ktdata3$votedate <- lubridate::ymd(votedate)
   
   # Return

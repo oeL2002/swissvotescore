@@ -2,14 +2,13 @@
 #'
 #' \code{swiss_json_to_dfr} transforms the json containing the results of a selected federal votedate into a tibble.
 #'
-#' @param votedate date of the ballot. Default: most recent ballot available. To select multiple ballots use the 'get_swissvotes'-function. Format = YYYYMMDD
+#' @param x path to a results json previously downloaded from opendata.swiss, or the
+#'   already-parsed json. The caller decides where the bytes come from; this function
+#'   performs no network access.
+#' @param votedate date of the ballot. Required. Format = YYYY-MM-DD
 #' @param geolevel geographical level for which the results should be loaded. Options: "national", "canton", "district" or "municipality".
-#' @param dataurl url of the dataset on opendata.swiss
-#' @param index selection by index of the resource (last published = 1).
 #' @param language defines the language of the vote title. Options: "DE" for German, "FR" for French, "IT" for Italian or "RM" for Romansh.
-#' @param call_res result of a previous call to the base API. Optional argument.
-#' 
-#' @importFrom httr add_headers GET http_error content
+#'
 #' @importFrom jsonlite fromJSON
 #' @importFrom tibble tibble
 #' @importFrom purrr map_chr map
@@ -22,55 +21,23 @@
 #' @export
 #' 
 #' @examples
-#' 
-#' # Transform the json of the most recent vote
-#' results <- swiss_json_to_dfr()
+#' \dontrun{
+#' # Transform an archived results json
+#' swiss_json_to_dfr("klimaschutz_2023.json", votedate = "2023-06-18")
 #'
-#' # Transform the json of a selected votedate
-#' swiss_json_to_dfr(votedate = "2019-02-10")
-#'
-swiss_json_to_dfr <- function(votedate = NULL, geolevel = "municipality", dataurl = NULL, index = NULL, language = "DE", call_res) {
-  
+#' # Or hand it json you parsed yourself
+#' swiss_json_to_dfr(jsonlite::fromJSON("klimaschutz_2023.json"), votedate = "2023-06-18")
+#' }
+swiss_json_to_dfr <- function(x, votedate, geolevel = "municipality", language = "DE") {
+
   # Check inputs
   check_geolevel(geolevel, available_geolevels = c("national", "canton", "district", "municipality", "zh_counting_districts"))
   check_language(language, available_languages = c("DE", "FR", "IT", "RM"))
-  
-  # Get URL if required
-  if (is.null(dataurl)) {
-    
-    # Call API if required
-    if (missing(call_res)) call_res <- call_api_base(geolevel = "national")
-    
-    # Handle votedate
-    available_dates <- available_votedates(geolevel = "national", call_res)
-    if (is.null(votedate)) votedate <- max(available_dates)
-    votedate <- lubridate::ymd(votedate)
-    check_votedate(votedate, available_dates)
-    
-    # Fail gracefully when available votedates cannot be parsed.
-    if(length(available_dates)<1){
-      
-      message("Available Votedates cannot be parsed. There might be a technical issue with the opendata.swiss API.")
-      
-      return(invisible(NULL))
-      
-    }
+  if (missing(votedate)) stop("'votedate' is required: it cannot be inferred from a local file.")
 
-    # Get URL
-    urls <- get_vote_urls(geolevel = "national", call_res = call_res)
-    dataurl <- urls[urls[["date"]] == votedate,][["download_url"]]
-    
-    }
-  
-  # Index
-  if (!is.null(index)) dataurl <- dataurl[index]
-  if (length(dataurl) > 1) stop("This is not a vectorised function. Only one URL can be queried at a time.")
-  
-  # Fetch, check and extract vote data
-  res <- httr::GET(dataurl, httr::add_headers(`User-Agent` = "Mozilla/5.0"))
-  res_data <- check_api_call(res)
-  # res_data <- suppressWarnings(jsonlite::fromJSON(httr::content(res, as = "text", encoding = "UTF-8")))
-  
+  # Read the vote data: a path to parse, or already-parsed json
+  res_data <- if (is.character(x)) suppressWarnings(jsonlite::fromJSON(x)) else x
+
   if(!is.null(res_data)){
   
   # Simplify data
@@ -173,12 +140,6 @@ swiss_json_to_dfr <- function(votedate = NULL, geolevel = "municipality", dataur
   }
   
   # Add votedate
-  if (is.null(votedate)) {
-    
-    urls <- get_vote_urls(geolevel = "national", call_res = call_res)
-    votedate <- urls[urls[["download_url"]] == dataurl,][["date"]]
-    
-  }
   findata$votedate <- lubridate::ymd(votedate)
   
   # Return
