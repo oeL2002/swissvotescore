@@ -75,11 +75,6 @@ Only `swiss_json_to_dfr()` and `canton_json_to_dfr()` are kept. For everything e
 including live vote-Sunday data, `get_geodata()` and the Swissvotes database, use
 swissdd itself.
 
-Verified identical: run against the three federal vote days 2017-05-21, 2021-06-13 and
-2023-06-18, this package returns the same 19,051 rows and 17 columns as upstream
-swissdd 1.1.6 fetching the same files over the network — no differing keys, no
-differing values.
-
 ## Credit and licence
 
 Written by Thomas Lo Russo and Thomas Willi as part of
